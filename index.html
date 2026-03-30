@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Herbalife</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #7AC142;
+            --primary-dark: #639D34;
+            --dark: #2C3E50;
+            --light: #F4F7F6;
+            --white: #FFFFFF;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #2ecc71;
+            --grey: #bdc3c7;
+            --border: #E0E6ED;
+        }
+
+        body { font-family: 'Montserrat', sans-serif; background-color: var(--light); margin: 0; color: var(--dark); padding-bottom: 50px; }
+        
+        .navbar { background-color: var(--dark); color: var(--white); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .navbar h1 { margin: 0; font-size: 1.5rem; color: var(--primary); }
+        .controls { display: flex; gap: 15px; align-items: center; }
+        .controls select, .controls input { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-family: inherit; outline: none; }
+        
+        /* Dashboard Kleuren Hersteld */
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 20px 30px; }
+        .stat-card { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 6px solid var(--primary); }
+        .stat-card h3 { margin: 0 0 10px 0; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; font-weight: 700; }
+        .stat-card .value { font-size: 1.6rem; font-weight: 700; margin: 0; }
+        
+        .card-vp { border-color: #3498db; }
+        .card-inkoop { border-color: var(--warning); }
+        .card-verkoop { border-color: #9b59b6; }
+        .card-winst { border-color: var(--primary); }
+
+        .main-container { padding: 0 30px; display: flex; flex-direction: column; gap: 30px; }
+        
+        .table-container { background: var(--white); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        th { background-color: #F8FAFC; color: #7f8c8d; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; }
+        
+        /* Stock Kleurcodes */
+        .stock-input { width: 60px; padding: 6px; border-radius: 6px; text-align: center; font-weight: bold; border: 2px solid transparent; outline: none;}
+        .stock-0 { background-color: #f2f2f2; border-color: var(--grey); color: #7f8c8d; }
+        .stock-1 { background-color: #fee2e2; border-color: var(--danger); color: #c0392b; }
+        .stock-2 { background-color: #fef3c7; border-color: var(--warning); color: #d35400; }
+        .stock-3 { background-color: #e8f5e9; border-color: var(--success); color: #27ae60; }
+        
+        .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit; }
+        .btn-sell { background-color: var(--primary); color: white; }
+        .btn-sell:disabled { background-color: #bdc3c7; cursor: not-allowed; opacity: 0.5; }
+        
+        .category-header { background-color: var(--dark) !important; color: white !important; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .cat-icon { float: right; transition: 0.3s; }
+        .hidden-row { display: none; }
+
+        .bottom-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+        .panel { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .panel h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        
+        .list-style { list-style: none; padding: 0; margin: 0; max-height: 400px; overflow-y: auto; }
+        .list-style li { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .profit-green { color: var(--primary-dark); font-weight: bold; }
+        .btn-undo { background: #ffeaea; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h1>Stock Herbalife</h1>
+        <div class="controls">
+            <input type="text" id="searchInput" placeholder="Zoek op naam of SKU..." onkeyup="renderTable()">
+            <select id="discountSelect" onchange="changeDiscount()">
+                <option value="25">25% Korting</option>
+                <option value="35">35% Korting</option>
+                <option value="42">42% Korting</option>
+                <option value="50">50% Korting</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <div class="stat-card card-vp"><h3>VP in Stock</h3><p class="value" id="dash-vp">0.00</p></div>
+        <div class="stat-card card-inkoop"><h3>Inkoopwaarde</h3><p class="value" id="dash-inkoop">€ 0,00</p></div>
+        <div class="stat-card card-verkoop"><h3>Verkoopwaarde</h3><p class="value" id="dash-verkoop">€ 0,00</p></div>
+        <div class="stat-card card-winst"><h3>Potentiële Winst</h3><p class="value" id="dash-winst" style="color:var(--primary-dark)">€ 0,00</p></div>
+    </div>
+
+    <div class="main-container">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>SKU</th><th>Product</th><th>VP</th><th>Klant (€)</th><th>Inkoop (€)</th><th>Winst (€)</th><th>Stock</th><th>Actie</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="bottom-grid">
+            <div class="panel">
+                <h2>Laatste Verkopen (Logboek)</h2>
+                <ul class="list-style" id="historyList"></ul>
+            </div>
+            <div class="panel">
+                <h2>Winst per Maand</h2>
+                <ul class="list-style" id="monthlyList"></ul>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const dbProducts = [
+        // ONTBIJT & MAALTIJDEN
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "1188", name: "Herbal Aloe Drank Original - 1,9 liter", vp: 91.10, retail: 190.90 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "0006", name: "Herbal Aloë Drank Original - 473 ml", vp: 24.95, retail: 52.80 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "1065", name: "Herbal Aloë Drank Mango - 473 ml", vp: 24.95, retail: 52.80 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "1196", name: "Herbal Aloë Max - 473 ml", vp: 28.15, retail: 61.70 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "166K", name: "Instant Theedrank Original - 102 g", vp: 34.95, retail: 73.25 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "165K", name: "Instant Theedrank Original - 51 g", vp: 19.95, retail: 38.25 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "167K", name: "Instant Theedrank Citroen - 51 g", vp: 19.95, retail: 38.25 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "168K", name: "Instant Theedrank Framboos - 51 g", vp: 19.95, retail: 38.25 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "169K", name: "Instant Theedrank Perzik - 51 g", vp: 19.95, retail: 38.25 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "4462", name: "F1 Shake Bananen Crème - 550 g", vp: 23.95, retail: 60.90 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "4463", name: "F1 Shake Frisse Aardbei - 550 g", vp: 23.95, retail: 60.90 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "4465", name: "F1 Shake Cafè Latte - 550 g", vp: 23.95, retail: 60.90 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "4466", name: "F1 Shake Romige Vanille - 550 g", vp: 23.95, retail: 60.90 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "4467", name: "F1 Shake Cookie Crunch - 550 g", vp: 23.95, retail: 60.90 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "4468", name: "F1 Shake Zachte Chocolade - 550 g", vp: 23.95, retail: 60.90 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "4471", name: "F1 Shake Munt Chocolade - 550 g", vp: 23.95, retail: 60.90 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "048K", name: "F1 Shake Romige Vanille - 780 g", vp: 32.75, retail: 79.85 },
+        { cat: "ONTBIJT/MAALTIJDEN", sku: "4469", name: "F1 Vrij Van Framboos & Witte Choco", vp: 23.95, retail: 60.90 },
+        
+        // PROTEINE & SNACKS
+        { cat: "PROTEINE", sku: "528K", name: "Proteïne Bak Mix (PBM)", vp: 26.90, retail: 68.35 },
+        { cat: "PROTEINE", sku: "4472", name: "Express Maaltijdreep Chocolade", vp: 14.00, retail: 30.70 },
+        { cat: "PROTEINE", sku: "013K", name: "Tri Blend Select Banaan - 600 g", vp: 37.50, retail: 90.25 },
+        { cat: "PROTEINE", sku: "172K", name: "Vegan Proteïnedrankmix Vanille", vp: 31.45, retail: 68.35 },
+        { cat: "PROTEINE", sku: "012K", name: "High Protein Iced Coffee Latte", vp: 30.55, retail: 72.75 },
+        { cat: "PROTEINE", sku: "141K", name: "Proteïne Chips Barbecue (10st)", vp: 11.75, retail: 26.70 },
+        { cat: "PROTEINE", sku: "142K", name: "Proteïne Chips Sour Cream (10st)", vp: 11.75, retail: 26.70 },
+        { cat: "PROTEINE", sku: "2600", name: "Proteïnedrankmix (PDM) Vanille", vp: 33.00, retail: 71.75 },
+        { cat: "PROTEINE", sku: "0242", name: "F3 Proteïnepoeder - 240 g", vp: 17.95, retail: 48.90 },
+        { cat: "PROTEINE", sku: "3968", name: "Proteïnereep Vanille Amandel", vp: 13.22, retail: 27.80 },
+        { cat: "PROTEINE", sku: "3976", name: "Proteïnereep Citroen", vp: 13.22, retail: 27.80 },
+
+        // SUPPLEMENTEN
+        { cat: "SUPPLEMENTEN", sku: "376K", name: "Herbalife Gels ViewVita", vp: 27.20, retail: 62.60 },
+        { cat: "SUPPLEMENTEN", sku: "282K", name: "Night mode Kamille & Perzik", vp: 31.25, retail: 63.35 },
+        { cat: "SUPPLEMENTEN", sku: "236K", name: "Phyto Complete 42,8 g", vp: 38.15, retail: 85.35 },
+        { cat: "SUPPLEMENTEN", sku: "243K", name: "Active Mind Complex", vp: 27.25, retail: 54.90 },
+        { cat: "SUPPLEMENTEN", sku: "173K", name: "Microbiotic Max (20 zakjes)", vp: 27.10, retail: 62.65 },
+        { cat: "SUPPLEMENTEN", sku: "233K", name: "Immune Booster", vp: 18.90, retail: 50.65 },
+        { cat: "SUPPLEMENTEN", sku: "0043", name: "Herbalifeline Max", vp: 19.40, retail: 40.70 },
+        { cat: "SUPPLEMENTEN", sku: "2554", name: "Multivezel Drank", vp: 22.95, retail: 43.40 },
+        { cat: "SUPPLEMENTEN", sku: "0267", name: "Beta Heart Vanille", vp: 25.95, retail: 57.20 },
+        { cat: "SUPPLEMENTEN", sku: "2039", name: "Formula 2 Vitaminen VROUWEN", vp: 13.55, retail: 30.95 },
+        { cat: "SUPPLEMENTEN", sku: "1746", name: "Formula 2 Vitaminen MANNEN", vp: 13.55, retail: 30.95 },
+        { cat: "SUPPLEMENTEN", sku: "0020", name: "Xtra-Cal", vp: 10.25, retail: 24.35 },
+        { cat: "SUPPLEMENTEN", sku: "3150", name: "Niteworks", vp: 48.75, retail: 108.65 },
+
+        // HERBALIFE 24 & SPORT
+        { cat: "HERBALIFE 24", sku: "3152", name: "Lift Off Citroen", vp: 15.95, retail: 39.95 },
+        { cat: "HERBALIFE 24", sku: "488K", name: "H24 Creatine Plus", vp: 15.95, retail: 36.35 },
+        { cat: "HERBALIFE 24", sku: "403K", name: "H24 Rebuild Strength Chocolade", vp: 33.55, retail: 78.75 },
+        { cat: "HERBALIFE 24", sku: "192K", name: "H24 LiftOff Max Grapefruit", vp: 15.95, retail: 36.90 },
+        { cat: "HERBALIFE 24", sku: "1466", name: "CR7 Drive Açai Bessen (Pot)", vp: 12.50, retail: 26.80 },
+        { cat: "HERBALIFE 24", sku: "1433", name: "H24 Hydrate Sinaasappel", vp: 17.20, retail: 42.90 },
+
+        // SKIN & ALOE VERZORGING
+        { cat: "SKIN & VERZORGING", sku: "539K", name: "HL/Skin Nachtcrème", vp: 35.20, retail: 66.00 },
+        { cat: "SKIN & VERZORGING", sku: "508K", name: "HL/Skin Niacinamide Serum", vp: 31.70, retail: 59.40 },
+        { cat: "SKIN & VERZORGING", sku: "076K", name: "SKIN Collageen Skin Booster", vp: 37.10, retail: 83.00 },
+        { cat: "SKIN & VERZORGING", sku: "0765", name: "SKIN Verzachtende Aloë Cleanser", vp: 16.75, retail: 33.70 },
+        { cat: "SKIN & VERZORGING", sku: "2561", name: "Herbal Aloë Hand & Body Wash", vp: 8.30, retail: 18.60 },
+        { cat: "SKIN & VERZORGING", sku: "2564", name: "Herbal Aloë Shampoo", vp: 8.30, retail: 18.40 },
+        { cat: "SKIN & VERZORGING", sku: "2565", name: "Herbal Aloë Conditioner", vp: 8.30, retail: 18.40 }
+    ];
+
+    let myStock = JSON.parse(localStorage.getItem('hbl_stock')) || {};
+    let salesHistory = JSON.parse(localStorage.getItem('hbl_history')) || [];
+    let collapsedCats = JSON.parse(localStorage.getItem('hbl_collapsed')) || {};
+    let savedDiscount = localStorage.getItem('hbl_discount') || "42";
+
+    document.getElementById('discountSelect').value = savedDiscount;
+    dbProducts.forEach(p => { p.stock = myStock[p.sku] || 0; });
+
+    const formatMoney = (amount) => "€ " + amount.toFixed(2).replace('.', ',');
+
+    function changeDiscount() {
+        localStorage.setItem('hbl_discount', document.getElementById('discountSelect').value);
+        updateAll();
+    }
+
+    function toggleCategory(cat) {
+        collapsedCats[cat] = !collapsedCats[cat];
+        localStorage.setItem('hbl_collapsed', JSON.stringify(collapsedCats));
+        renderTable();
+    }
+
+    function updateAll() {
+        renderTable();
+        renderHistory();
+        renderMonthlyStats();
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        const discountVal = parseFloat(document.getElementById('discountSelect').value) / 100;
+        const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+        tbody.innerHTML = '';
+        
+        let currentCat = '';
+        let totVP = 0; let totBuy = 0; let totRetail = 0; let totProf = 0;
+
+        dbProducts.forEach(product => {
+            if (searchQuery && !product.name.toLowerCase().includes(searchQuery) && !product.sku.toLowerCase().includes(searchQuery)) return;
+
+            const buyPrice = product.retail * (1 - discountVal);
+            const profit = product.retail - buyPrice;
+
+            if(product.stock > 0) {
+                totVP += (product.vp * product.stock); totBuy += (buyPrice * product.stock);
+                totRetail += (product.retail * product.stock); totProf += (profit * product.stock);
+            }
+
+            if (product.cat !== currentCat) {
+                tbody.innerHTML += `<tr class="category-header" onclick="toggleCategory('${product.cat}')"><td colspan="8">${product.cat} <span class="cat-icon">${collapsedCats[product.cat] ? '►' : '▼'}</span></td></tr>`;
+                currentCat = product.cat;
+            }
+
+            if (collapsedCats[product.cat]) return;
+
+            let sClass = 'stock-3'; // groen
+            if (product.stock === 0) sClass = 'stock-0'; // grijs
+            else if (product.stock === 1) sClass = 'stock-1'; // rood
+            else if (product.stock === 2) sClass = 'stock-2'; // oranje
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${product.sku}</strong></td><td>${product.name}</td><td>${product.vp.toFixed(2)}</td>
+                    <td>${formatMoney(product.retail)}</td><td>${formatMoney(buyPrice)}</td>
+                    <td class="profit-green">${formatMoney(profit)}</td>
+                    <td><input type="number" min="0" class="stock-input ${sClass}" value="${product.stock}" onchange="changeStock('${product.sku}', this.value)"></td>
+                    <td><button class="btn btn-sell" onclick="sellItem('${product.sku}')" ${product.stock === 0 ? 'disabled' : ''}>Verkoop</button></td>
+                </tr>`;
+        });
+
+        document.getElementById('dash-vp').innerText = totVP.toFixed(2);
+        document.getElementById('dash-inkoop').innerText = formatMoney(totBuy);
+        document.getElementById('dash-verkoop').innerText = formatMoney(totRetail);
+        document.getElementById('dash-winst').innerText = formatMoney(totProf);
+    }
+
+    function changeStock(sku, val) {
+        const v = parseInt(val) || 0;
+        const p = dbProducts.find(prod => prod.sku === sku);
+        if(p) {
+            p.stock = v;
+            myStock[sku] = v;
+            localStorage.setItem('hbl_stock', JSON.stringify(myStock));
+            updateAll();
+        }
+    }
+
+    function sellItem(sku) {
+        const p = dbProducts.find(prod => prod.sku === sku);
+        if (p && p.stock > 0) {
+            p.stock--;
+            myStock[sku] = p.stock;
+            localStorage.setItem('hbl_stock', JSON.stringify(myStock));
+
+            const disc = parseFloat(document.getElementById('discountSelect').value) / 100;
+            const profit = p.retail - (p.retail * (1 - disc));
+            const now = new Date();
+            const month = now.toLocaleString('nl-NL', { month: 'long', year: 'numeric' });
+
+            salesHistory.unshift({ id: Date.now(), sku: p.sku, name: p.name, profit: profit, month: month, time: now.toLocaleDateString() + " " + now.getHours() + ":" + (now.getMinutes()<10?'0':'')+now.getMinutes() });
+            localStorage.setItem('hbl_history', JSON.stringify(salesHistory));
+            updateAll();
+        }
+    }
+
+    function undoSale(id) {
+        const idx = salesHistory.findIndex(s => s.id === id);
+        if(idx > -1) {
+            const item = salesHistory[idx];
+            const p = dbProducts.find(prod => prod.sku === item.sku);
+            if(p) {
+                p.stock++;
+                myStock[p.sku] = p.stock;
+                localStorage.setItem('hbl_stock', JSON.stringify(myStock));
+            }
+            salesHistory.splice(idx, 1);
+            localStorage.setItem('hbl_history', JSON.stringify(salesHistory));
+            updateAll();
+        }
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = salesHistory.length ? '' : '<li>Geen verkopen in logboek.</li>';
+        salesHistory.slice(0, 15).forEach(s => {
+            list.innerHTML += `<li><div><small>${s.time}</small><br>1x ${s.name}</div> <span><span class="profit-green">+ ${formatMoney(s.profit)}</span> <button class="btn-undo" onclick="undoSale(${s.id})">Undo</button></span></li>`;
+        });
+    }
+
+    function renderMonthlyStats() {
+        const list = document.getElementById('monthlyList');
+        const stats = {};
+        salesHistory.forEach(s => { stats[s.month] = (stats[s.month] || 0) + s.profit; });
+        list.innerHTML = Object.keys(stats).length ? '' : '<li>Nog geen data beschikbaar.</li>';
+        const sortedMonths = Object.keys(stats).reverse();
+        sortedMonths.forEach(m => {
+            list.innerHTML += `<li><strong>${m}</strong> <span class="profit-green">${formatMoney(stats[m])}</span></li>`;
+        });
+    }
+
+    updateAll();
+</script>
+</body>
+</html>
